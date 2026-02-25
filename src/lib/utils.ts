@@ -55,6 +55,45 @@ export function getAssetPrice(asset: { value: number | string }): number {
   return Number(asset.value)
 }
 
+/**
+ * Calculates how many tokens have vested as of now, based on the schedule.
+ * The first vest event happens ON vest_start_date (mirrors AddAssetModal logic).
+ */
+export function calcVestedTokens(schedule: {
+  vest_start_date: string
+  vest_amount: number | string
+  vest_frequency: string
+  total_tokens: number | string
+}): number {
+  const start = new Date(schedule.vest_start_date)
+  const now = new Date()
+  if (start > now) return 0
+
+  const vestAmount = Number(schedule.vest_amount)
+  const totalTokens = Number(schedule.total_tokens)
+  const msElapsed = now.getTime() - start.getTime()
+
+  let periods: number
+  switch (schedule.vest_frequency) {
+    case 'second': periods = Math.floor(msElapsed / 1_000) + 1; break
+    case 'minute': periods = Math.floor(msElapsed / 60_000) + 1; break
+    case 'hour':   periods = Math.floor(msElapsed / 3_600_000) + 1; break
+    case 'day':    periods = Math.floor(msElapsed / 86_400_000) + 1; break
+    case 'week':   periods = Math.floor(msElapsed / (7 * 86_400_000)) + 1; break
+    case 'month': {
+      // Month lengths vary — count boundary crossings with the same loop used at creation
+      let count = 0
+      const d = new Date(start)
+      while (d <= now) { count++; d.setMonth(d.getMonth() + 1) }
+      periods = count
+      break
+    }
+    default: periods = 0
+  }
+
+  return Math.min(periods * vestAmount, totalTokens)
+}
+
 export function getChangeColor(value: number): string {
   if (value > 0) return 'text-emerald-400'
   if (value < 0) return 'text-red-400'

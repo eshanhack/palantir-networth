@@ -7,7 +7,7 @@ import { IncomeExpenseChart } from '@/components/charts/IncomeExpenseChart'
 import { SpendingBreakdownChart } from '@/components/charts/SpendingBreakdownChart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { supabase } from '@/lib/supabase'
-import { formatCurrency, nextFriday, next16thOfMonth, getAssetValue } from '@/lib/utils'
+import { formatCurrency, nextFriday, next16thOfMonth, getAssetValue, calcVestedTokens } from '@/lib/utils'
 import { calculateIncomeTax } from '@/lib/ato-tax'
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
@@ -27,6 +27,7 @@ async function getDashboardData() {
     recurringBillsRes,
     oneOffBillsRes,
     incomeConfigRes,
+    vestingRes,
   ] = await Promise.all([
     supabase.from('assets').select('*').order('value', { ascending: false }),
     supabase.from('liabilities').select('*'),
@@ -35,6 +36,7 @@ async function getDashboardData() {
     supabase.from('recurring_bills').select('*').eq('is_active', true).order('next_due_date'),
     supabase.from('one_off_bills').select('*').eq('is_paid', false).order('due_date'),
     supabase.from('income_config').select('*').limit(1).single(),
+    supabase.from('token_vesting_schedules').select('*'),
   ])
 
   return {
@@ -45,6 +47,7 @@ async function getDashboardData() {
     recurringBills: recurringBillsRes.data ?? [],
     oneOffBills: oneOffBillsRes.data ?? [],
     incomeConfig: incomeConfigRes.data,
+    vestingSchedules: vestingRes.data ?? [],
   }
 }
 
@@ -70,11 +73,23 @@ async function getMonthlyHistory() {
 
 export default async function DashboardPage() {
   const [data, monthlyHistory] = await Promise.all([getDashboardData(), getMonthlyHistory()])
-  const { assets, liabilities, transactions, snapshots, recurringBills, oneOffBills, incomeConfig } = data
+  const { assets, liabilities, transactions, snapshots, recurringBills, oneOffBills, incomeConfig, vestingSchedules } = data
+
+  // Build a lookup: asset_id → vesting schedule
+  const vestingByAsset = new Map(vestingSchedules.map((v: { asset_id: string }) => [v.asset_id, v]))
 
   // Net worth calculations
+  // Paper = full value of all assets (vested + unvested)
   const totalAssets = assets.reduce((s, a) => s + getAssetValue(a), 0)
-  const liquidAssets = assets.filter(a => a.is_liquid).reduce((s, a) => s + getAssetValue(a), 0)
+  // Liquid = vested tokens only (for vesting assets) OR full value (for is_liquid assets without vesting)
+  const liquidAssets = assets.reduce((s, a) => {
+    const vesting = vestingByAsset.get(a.id)
+    if (vesting) {
+      const vestedTokens = calcVestedTokens(vesting)
+      return s + vestedTokens * Number(a.value) // a.value = price per unit
+    }
+    return a.is_liquid ? s + getAssetValue(a) : s
+  }, 0)
   const totalLiabilities = liabilities.reduce((s, l) => s + Number(l.balance), 0)
   const paperNetWorth = totalAssets - totalLiabilities
   const liquidNetWorth = liquidAssets - totalLiabilities
