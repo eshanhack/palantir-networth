@@ -1,4 +1,5 @@
 import { MetricCard } from '@/components/dashboard/MetricCard'
+import { AnimatedMetricCard } from '@/components/dashboard/AnimatedMetricCard'
 import { BillsWidget } from '@/components/dashboard/BillsWidget'
 import { IncomeEventsWidget } from '@/components/dashboard/IncomeEventsWidget'
 import { AssetBreakdownWidget } from '@/components/dashboard/AssetBreakdownWidget'
@@ -98,12 +99,31 @@ export default async function DashboardPage() {
   const paperNetWorth = totalAssets - totalLiabilities
   const liquidNetWorth = liquidAssets - totalLiabilities
 
-  // Monthly metrics
+  // Monthly metrics (transaction-based, used for net/savings/runway row)
   const monthlyIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
   const monthlyExpenses = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0)
   const monthlyNet = monthlyIncome - monthlyExpenses
   const savingsRate = monthlyIncome > 0 ? (monthlyNet / monthlyIncome) * 100 : 0
   const cashRunway = monthlyExpenses > 0 ? liquidAssets / monthlyExpenses : 0
+
+  // Monthly Cash Income = gross salary / 12 + weekly dividend × 4
+  const monthlySalary = incomeConfig ? Number(incomeConfig.salary_gross_annual) / 12 : 0
+  const monthlyDividend = dividendConfig ? Number(dividendConfig.weekly_amount) * 4 : 0
+  const monthlyCashIncome = monthlySalary + monthlyDividend
+
+  // Monthly Liquidity = cash income + token vest value per month
+  function vestsPerMonth(freq: string) {
+    if (freq === 'month') return 1
+    if (freq === 'week') return 52 / 12
+    if (freq === 'day') return 365 / 12
+    return 1
+  }
+  const assetPriceById = new Map(assets.map(a => [a.id, Number(a.value)]))
+  const monthlyVestValue = vestingSchedules.reduce((sum, vs) => {
+    const price = assetPriceById.get(vs.asset_id) ?? 0
+    return sum + Number(vs.vest_amount) * price * vestsPerMonth(vs.vest_frequency)
+  }, 0)
+  const monthlyLiquidity = monthlyCashIncome + monthlyVestValue
 
   // Net worth change (30d)
   const latest = snapshots[snapshots.length - 1]
@@ -219,17 +239,16 @@ export default async function DashboardPage() {
           large
           className="xl:col-span-1"
         />
-        <MetricCard
-          title="Monthly Income"
-          value={monthlyIncome}
-          subtitle="After tax, this month"
+        <AnimatedMetricCard
+          title="Monthly Cash Income"
+          value={monthlyCashIncome}
+          subtitle="Salary + Dividend"
           className="xl:col-span-1"
         />
-        <MetricCard
-          title="Monthly Expenses"
-          value={monthlyExpenses}
-          change={monthlyExpenses > 0 ? -5.2 : 0}
-          changePeriod="last month"
+        <AnimatedMetricCard
+          title="Monthly Liquidity"
+          value={monthlyLiquidity}
+          subtitle="Cash Income + Token Vest"
           className="xl:col-span-1"
         />
       </div>
