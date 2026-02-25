@@ -40,9 +40,11 @@ export function AssetsTable({ assets }: { assets: Asset[] }) {
               const totalValue = getAssetValue(asset)
               const price = getAssetPrice(asset)
               const qty = asset.quantity ? Number(asset.quantity) : null
-              const cost = Number(asset.cost_basis ?? 0)
-              const gain = cost > 0 ? totalValue - cost : 0
-              const gainPct = cost > 0 ? (gain / cost) * 100 : 0
+              const costPerUnit = Number(asset.cost_basis ?? 0)
+              // cost_basis is per-unit (like value), so total cost = costPerUnit * qty
+              const totalCost = costPerUnit > 0 ? (qty ? costPerUnit * qty : costPerUnit) : 0
+              const gain = totalCost > 0 ? totalValue - totalCost : 0
+              const gainPct = totalCost > 0 ? (gain / totalCost) * 100 : 0
               return (
                 <tr
                   key={asset.id}
@@ -66,13 +68,23 @@ export function AssetsTable({ assets }: { assets: Asset[] }) {
                   </td>
                   <td className="px-5 py-3 text-right text-sm font-semibold text-white">{formatCurrency(totalValue)}</td>
                   <td className="px-5 py-3 text-right text-sm text-zinc-400">
-                    {asset.cost_basis ? formatCurrency(cost) : '—'}
+                    {asset.cost_basis ? (
+                      <div>
+                        <p>{formatCurrency(totalCost)}</p>
+                        {qty && <p className="text-xs text-zinc-600">{formatCurrency(costPerUnit)}/unit</p>}
+                      </div>
+                    ) : '—'}
                   </td>
                   <td className="px-5 py-3 text-right">
                     {asset.cost_basis ? (
-                      <div className={`text-sm font-medium ${getChangeBg(gain)} inline-flex items-center gap-1 px-2 py-0.5 rounded`}>
-                        {gain >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                        {formatPercent(gainPct)}
+                      <div>
+                        <div className={`text-sm font-medium ${getChangeBg(gain)} inline-flex items-center gap-1 px-2 py-0.5 rounded`}>
+                          {gain >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                          {formatPercent(gainPct)}
+                        </div>
+                        <p className={`text-xs mt-0.5 text-right ${gain >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {gain >= 0 ? '+' : ''}{formatCurrency(gain)}
+                        </p>
                       </div>
                     ) : '—'}
                   </td>

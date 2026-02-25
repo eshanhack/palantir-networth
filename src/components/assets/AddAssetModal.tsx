@@ -170,7 +170,7 @@ export function AddAssetModal({ open, onClose }: AddAssetModalProps) {
               </>
             )}
             <div>
-              <label className="text-xs text-zinc-400 mb-1.5 block">Cost Basis (AUD)</label>
+              <label className="text-xs text-zinc-400 mb-1.5 block">{hasQuantity ? 'Avg. Buy Price (AUD)' : 'Cost Basis (AUD)'}</label>
               <input
                 type="number" step="0.01" min="0"
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500"
