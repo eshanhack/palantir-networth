@@ -43,6 +43,8 @@ export function EditAssetModal({ asset, onClose }: EditAssetModalProps) {
 
   const isCrypto = form.type === 'crypto'
   const isStock = form.type === 'stock' || form.type === 'etf'
+  const hasQuantity = isCrypto || isStock
+  const valueLabel = hasQuantity ? 'Price per Unit (AUD)' : 'Current Value (AUD)'
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -113,9 +115,9 @@ export function EditAssetModal({ asset, onClose }: EditAssetModalProps) {
               </select>
             </div>
             <div>
-              <label className="text-xs text-zinc-400 mb-1.5 block">Current Value (AUD)</label>
+              <label className="text-xs text-zinc-400 mb-1.5 block">{valueLabel}</label>
               <input
-                type="number" step="0.01" min="0"
+                type="number" step="any" min="0"
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500"
                 value={form.value}
                 onChange={e => setForm(f => ({ ...f, value: e.target.value }))}

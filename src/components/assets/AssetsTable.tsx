@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { formatCurrency, formatPercent, getChangeBg } from '@/lib/utils'
+import { formatCurrency, formatPercent, getChangeBg, getAssetValue, getAssetPrice } from '@/lib/utils'
 import { Asset } from '@/types'
 import { EditAssetModal } from './EditAssetModal'
 import { TrendingUp, TrendingDown, Pencil } from 'lucide-react'
@@ -27,7 +27,8 @@ export function AssetsTable({ assets }: { assets: Asset[] }) {
               <th className="text-left px-5 py-3 text-xs font-medium text-zinc-500 uppercase">Asset</th>
               <th className="text-left px-5 py-3 text-xs font-medium text-zinc-500 uppercase">Type</th>
               <th className="text-right px-5 py-3 text-xs font-medium text-zinc-500 uppercase">Quantity</th>
-              <th className="text-right px-5 py-3 text-xs font-medium text-zinc-500 uppercase">Value</th>
+              <th className="text-right px-5 py-3 text-xs font-medium text-zinc-500 uppercase">Price</th>
+              <th className="text-right px-5 py-3 text-xs font-medium text-zinc-500 uppercase">Total Value</th>
               <th className="text-right px-5 py-3 text-xs font-medium text-zinc-500 uppercase">Cost Basis</th>
               <th className="text-right px-5 py-3 text-xs font-medium text-zinc-500 uppercase">Gain/Loss</th>
               <th className="text-center px-5 py-3 text-xs font-medium text-zinc-500 uppercase">Liquid</th>
@@ -36,9 +37,11 @@ export function AssetsTable({ assets }: { assets: Asset[] }) {
           </thead>
           <tbody>
             {assets.map(asset => {
-              const value = Number(asset.value)
-              const cost = Number(asset.cost_basis ?? value)
-              const gain = value - cost
+              const totalValue = getAssetValue(asset)
+              const price = getAssetPrice(asset)
+              const qty = asset.quantity ? Number(asset.quantity) : null
+              const cost = Number(asset.cost_basis ?? 0)
+              const gain = cost > 0 ? totalValue - cost : 0
               const gainPct = cost > 0 ? (gain / cost) * 100 : 0
               return (
                 <tr
@@ -56,11 +59,14 @@ export function AssetsTable({ assets }: { assets: Asset[] }) {
                     <Badge variant={typeBadgeVariant[asset.type] ?? 'default'}>{typeLabels[asset.type] ?? asset.type}</Badge>
                   </td>
                   <td className="px-5 py-3 text-right text-sm text-zinc-400 font-mono">
-                    {asset.quantity ? Number(asset.quantity).toLocaleString(undefined, { maximumFractionDigits: 6 }) : '—'}
+                    {qty ? qty.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '—'}
                   </td>
-                  <td className="px-5 py-3 text-right text-sm font-semibold text-white">{formatCurrency(value)}</td>
                   <td className="px-5 py-3 text-right text-sm text-zinc-400">
-                    {asset.cost_basis ? formatCurrency(Number(asset.cost_basis)) : '—'}
+                    {qty ? formatCurrency(price) : '—'}
+                  </td>
+                  <td className="px-5 py-3 text-right text-sm font-semibold text-white">{formatCurrency(totalValue)}</td>
+                  <td className="px-5 py-3 text-right text-sm text-zinc-400">
+                    {asset.cost_basis ? formatCurrency(cost) : '—'}
                   </td>
                   <td className="px-5 py-3 text-right">
                     {asset.cost_basis ? (

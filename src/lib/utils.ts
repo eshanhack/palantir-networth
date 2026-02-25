@@ -43,6 +43,18 @@ export function formatTokenAmount(amount: number, symbol: string): string {
   return `${amount.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${symbol}`
 }
 
+// For assets with quantity, value = price per unit. Total = price * qty.
+// For assets without quantity (cash, property), value = total directly.
+export function getAssetValue(asset: { value: number | string; quantity?: number | string | null }): number {
+  const price = Number(asset.value)
+  const qty = asset.quantity ? Number(asset.quantity) : null
+  return qty ? price * qty : price
+}
+
+export function getAssetPrice(asset: { value: number | string }): number {
+  return Number(asset.value)
+}
+
 export function getChangeColor(value: number): string {
   if (value > 0) return 'text-emerald-400'
   if (value < 0) return 'text-red-400'

@@ -7,7 +7,7 @@ import { IncomeExpenseChart } from '@/components/charts/IncomeExpenseChart'
 import { SpendingBreakdownChart } from '@/components/charts/SpendingBreakdownChart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { supabase } from '@/lib/supabase'
-import { formatCurrency, nextFriday, next16thOfMonth } from '@/lib/utils'
+import { formatCurrency, nextFriday, next16thOfMonth, getAssetValue } from '@/lib/utils'
 import { calculateIncomeTax } from '@/lib/ato-tax'
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns'
 import { RefreshButton } from '@/components/dashboard/RefreshButton'
@@ -73,8 +73,8 @@ export default async function DashboardPage() {
   const { assets, liabilities, transactions, snapshots, recurringBills, oneOffBills, incomeConfig } = data
 
   // Net worth calculations
-  const totalAssets = assets.reduce((s, a) => s + Number(a.value), 0)
-  const liquidAssets = assets.filter(a => a.is_liquid).reduce((s, a) => s + Number(a.value), 0)
+  const totalAssets = assets.reduce((s, a) => s + getAssetValue(a), 0)
+  const liquidAssets = assets.filter(a => a.is_liquid).reduce((s, a) => s + getAssetValue(a), 0)
   const totalLiabilities = liabilities.reduce((s, l) => s + Number(l.balance), 0)
   const paperNetWorth = totalAssets - totalLiabilities
   const liquidNetWorth = liquidAssets - totalLiabilities

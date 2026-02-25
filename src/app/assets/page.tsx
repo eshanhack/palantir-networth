@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, getAssetValue } from '@/lib/utils'
 import { Asset } from '@/types'
 import { AddAssetButton } from '@/components/assets/AddAssetButton'
 import { AssetsTable } from '@/components/assets/AssetsTable'
@@ -21,11 +21,11 @@ export default async function AssetsPage() {
   const { data: vestingSchedules } = await supabase.from('token_vesting_schedules').select('*')
 
   const allAssets: Asset[] = assets ?? []
-  const totalAssets = allAssets.reduce((s, a) => s + Number(a.value), 0)
-  const liquidAssets = allAssets.filter(a => a.is_liquid).reduce((s, a) => s + Number(a.value), 0)
+  const totalAssets = allAssets.reduce((s, a) => s + getAssetValue(a), 0)
+  const liquidAssets = allAssets.filter(a => a.is_liquid).reduce((s, a) => s + getAssetValue(a), 0)
 
   const byType = allAssets.reduce((acc, a) => {
-    acc[a.type] = (acc[a.type] ?? 0) + Number(a.value)
+    acc[a.type] = (acc[a.type] ?? 0) + getAssetValue(a)
     return acc
   }, {} as Record<string, number>)
 

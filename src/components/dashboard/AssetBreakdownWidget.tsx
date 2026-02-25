@@ -1,5 +1,5 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, getAssetValue } from '@/lib/utils'
 import { Asset } from '@/types'
 
 interface AssetBreakdownWidgetProps {
@@ -25,9 +25,9 @@ const typeColors: Record<string, string> = {
 }
 
 export function AssetBreakdownWidget({ assets }: AssetBreakdownWidgetProps) {
-  const total = assets.reduce((sum, a) => sum + a.value, 0)
+  const total = assets.reduce((sum, a) => sum + getAssetValue(a), 0)
   const byType = assets.reduce((acc, a) => {
-    acc[a.type] = (acc[a.type] ?? 0) + a.value
+    acc[a.type] = (acc[a.type] ?? 0) + getAssetValue(a)
     return acc
   }, {} as Record<string, number>)
 

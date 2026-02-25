@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
+import { getAssetValue } from '@/lib/utils'
 import { format } from 'date-fns'
 
 export async function POST() {
@@ -10,8 +11,8 @@ export async function POST() {
       supabase.from('liabilities').select('balance'),
     ])
 
-    const totalAssets = (assetsRes.data ?? []).reduce((s, a) => s + Number(a.value), 0)
-    const liquidAssets = (assetsRes.data ?? []).filter(a => a.is_liquid).reduce((s, a) => s + Number(a.value), 0)
+    const totalAssets = (assetsRes.data ?? []).reduce((s, a) => s + getAssetValue(a), 0)
+    const liquidAssets = (assetsRes.data ?? []).filter(a => a.is_liquid).reduce((s, a) => s + getAssetValue(a), 0)
     const totalLiabilities = (liabilitiesRes.data ?? []).reduce((s, l) => s + Number(l.balance), 0)
 
     const snapshot = {
