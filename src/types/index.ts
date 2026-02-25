@@ -13,6 +13,9 @@ export interface Asset {
   cost_basis?: number
   quantity?: number
   symbol?: string
+  coingecko_id?: string
+  ticker?: string
+  notes?: string
   is_liquid: boolean
   created_at: string
   updated_at: string
