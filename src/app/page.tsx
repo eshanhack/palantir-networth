@@ -76,7 +76,8 @@ export default async function DashboardPage() {
   const { assets, liabilities, transactions, snapshots, recurringBills, oneOffBills, incomeConfig, vestingSchedules } = data
 
   // Build a lookup: asset_id → vesting schedule
-  const vestingByAsset = new Map(vestingSchedules.map((v: { asset_id: string }) => [v.asset_id, v]))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const vestingByAsset = new Map(vestingSchedules.map((v: any) => [v.asset_id, v]))
 
   // Net worth calculations
   // Paper = full value of all assets (vested + unvested)
