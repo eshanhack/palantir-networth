@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/utils'
 import { Asset } from '@/types'
 import { AddAssetButton } from '@/components/assets/AddAssetButton'
