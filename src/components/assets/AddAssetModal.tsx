@@ -38,7 +38,6 @@ export function AddAssetModal({ open, onClose }: AddAssetModalProps) {
   })
   const [hasVesting, setHasVesting] = useState(false)
   const [vesting, setVesting] = useState({
-    total_tokens: '',
     vest_amount: '',
     vest_frequency: 'month',
     vest_start_date: '',
@@ -109,7 +108,7 @@ export function AddAssetModal({ open, onClose }: AddAssetModalProps) {
           token_symbol: form.symbol,
           token_name: form.name,
           coingecko_id: form.coingecko_id || null,
-          total_tokens: parseFloat(vesting.total_tokens) || 0,
+          total_tokens: parseFloat(form.quantity) || 0,
           vested_tokens: 0,
           vest_frequency: vesting.vest_frequency,
           vest_amount: vestAmt,
@@ -235,21 +234,11 @@ export function AddAssetModal({ open, onClose }: AddAssetModalProps) {
               {hasVesting && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs text-zinc-400 mb-1.5 block">Total Tokens</label>
+                    <label className="text-xs text-zinc-400 mb-1.5 block">Tokens per vest</label>
                     <input
                       type="number" step="any" min="0"
                       className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500"
-                      placeholder="0"
-                      value={vesting.total_tokens}
-                      onChange={e => setVesting(v => ({ ...v, total_tokens: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-zinc-400 mb-1.5 block">Amount per vest</label>
-                    <input
-                      type="number" step="any" min="0"
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500"
-                      placeholder="0"
+                      placeholder="e.g. 500000"
                       value={vesting.vest_amount}
                       onChange={e => setVesting(v => ({ ...v, vest_amount: e.target.value }))}
                     />
@@ -261,15 +250,12 @@ export function AddAssetModal({ open, onClose }: AddAssetModalProps) {
                       value={vesting.vest_frequency}
                       onChange={e => setVesting(v => ({ ...v, vest_frequency: e.target.value }))}
                     >
-                      <option value="second">Every Second</option>
-                      <option value="minute">Every Minute</option>
-                      <option value="hour">Every Hour</option>
                       <option value="day">Daily</option>
                       <option value="week">Weekly</option>
                       <option value="month">Monthly</option>
                     </select>
                   </div>
-                  <div>
+                  <div className="col-span-2">
                     <label className="text-xs text-zinc-400 mb-1.5 block">Start Date</label>
                     <input
                       type="date"

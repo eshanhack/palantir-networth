@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -39,6 +39,36 @@ export function EditAssetModal({ asset, onClose }: EditAssetModalProps) {
     is_liquid: asset?.is_liquid ?? true,
     notes: asset?.notes ?? '',
   })
+
+  // Vesting schedule state
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [existingVesting, setExistingVesting] = useState<any>(null)
+  const [hasVesting, setHasVesting] = useState(false)
+  const [vestingForm, setVestingForm] = useState({
+    vest_amount: '',
+    vest_frequency: 'month',
+    vest_start_date: '',
+  })
+
+  useEffect(() => {
+    if (!asset || asset.type !== 'crypto') return
+    supabase
+      .from('token_vesting_schedules')
+      .select('*')
+      .eq('asset_id', asset.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setExistingVesting(data)
+          setHasVesting(true)
+          setVestingForm({
+            vest_amount: data.vest_amount?.toString() ?? '',
+            vest_frequency: data.vest_frequency ?? 'month',
+            vest_start_date: data.vest_start_date ? data.vest_start_date.slice(0, 10) : '',
+          })
+        }
+      })
+  }, [asset?.id])
 
   const fetchPrice = async (symbol: string, cgId?: string) => {
     const type = form.type
@@ -87,6 +117,47 @@ export function EditAssetModal({ asset, onClose }: EditAssetModalProps) {
         notes: form.notes || null,
         updated_at: new Date().toISOString(),
       }).eq('id', asset.id)
+
+      // Handle vesting schedule for crypto assets
+      if (isCrypto) {
+        if (hasVesting && vestingForm.vest_start_date) {
+          const totalTokens = parseFloat(form.quantity) || 0
+
+          // Calculate next vest date
+          const start = new Date(vestingForm.vest_start_date)
+          const now = new Date()
+          let nextVest = new Date(start)
+          while (nextVest <= now) {
+            if (vestingForm.vest_frequency === 'month') nextVest.setMonth(nextVest.getMonth() + 1)
+            else if (vestingForm.vest_frequency === 'week') nextVest.setDate(nextVest.getDate() + 7)
+            else if (vestingForm.vest_frequency === 'day') nextVest.setDate(nextVest.getDate() + 1)
+            else break
+          }
+
+          const vestingData = {
+            asset_id: asset.id,
+            token_symbol: form.symbol,
+            token_name: form.name,
+            coingecko_id: form.coingecko_id || null,
+            total_tokens: totalTokens,
+            vested_tokens: 0,
+            vest_frequency: vestingForm.vest_frequency,
+            vest_amount: parseFloat(vestingForm.vest_amount) || 0,
+            vest_start_date: vestingForm.vest_start_date,
+            next_vest_date: nextVest.toISOString(),
+          }
+
+          if (existingVesting) {
+            await supabase.from('token_vesting_schedules').update(vestingData).eq('id', existingVesting.id)
+          } else {
+            await supabase.from('token_vesting_schedules').insert(vestingData)
+          }
+        } else if (!hasVesting && existingVesting) {
+          // Remove vesting schedule if toggled off
+          await supabase.from('token_vesting_schedules').delete().eq('id', existingVesting.id)
+        }
+      }
+
       router.refresh()
       onClose()
     } catch (err) {
@@ -165,7 +236,7 @@ export function EditAssetModal({ asset, onClose }: EditAssetModalProps) {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-zinc-400 mb-1.5 block">Quantity</label>
+                  <label className="text-xs text-zinc-400 mb-1.5 block">Total Tokens / Quantity</label>
                   <input
                     type="number" step="any" min="0"
                     className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500"
@@ -218,6 +289,57 @@ export function EditAssetModal({ asset, onClose }: EditAssetModalProps) {
               />
             </div>
           </div>
+
+          {/* Vesting schedule section for crypto */}
+          {isCrypto && (
+            <div className="border-t border-zinc-800 pt-4">
+              <div className="flex items-center gap-3 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setHasVesting(v => !v)}
+                  className={`relative w-9 h-5 rounded-full transition-colors ${hasVesting ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform ${hasVesting ? 'translate-x-4' : 'translate-x-0'}`} />
+                </button>
+                <span className="text-sm text-zinc-400">Has vesting schedule</span>
+              </div>
+              {hasVesting && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-zinc-400 mb-1.5 block">Tokens per vest</label>
+                    <input
+                      type="number" step="any" min="0"
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500"
+                      placeholder="e.g. 500000"
+                      value={vestingForm.vest_amount}
+                      onChange={e => setVestingForm(v => ({ ...v, vest_amount: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-zinc-400 mb-1.5 block">Frequency</label>
+                    <select
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                      value={vestingForm.vest_frequency}
+                      onChange={e => setVestingForm(v => ({ ...v, vest_frequency: e.target.value }))}
+                    >
+                      <option value="day">Daily</option>
+                      <option value="week">Weekly</option>
+                      <option value="month">Monthly</option>
+                    </select>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs text-zinc-400 mb-1.5 block">Vest start date</label>
+                    <input
+                      type="date"
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                      value={vestingForm.vest_start_date}
+                      onChange={e => setVestingForm(v => ({ ...v, vest_start_date: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex items-center justify-between pt-2 border-t border-zinc-800">
             <button
