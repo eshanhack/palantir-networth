@@ -187,7 +187,6 @@ export default async function DashboardPage() {
 
   // Token vest — next 16th of month at midnight
   // Calculate vest value: sum of vest_amount * asset price per schedule
-  const assetPriceById = new Map(assets.map(a => [a.id, Number(a.value)]))
   const nextVestAmount = vestingSchedules.reduce((sum, vs) => {
     const price = assetPriceById.get(vs.asset_id) ?? 0
     return sum + Number(vs.vest_amount) * price
