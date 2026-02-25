@@ -65,9 +65,11 @@ export function calcVestedTokens(schedule: {
   vest_frequency: string
   total_tokens: number | string
 }): number {
-  const start = new Date(schedule.vest_start_date)
+  // Postgres returns "2025-09-16 00:00:00+00" which Node.js won't parse.
+  // Slice to date-only "YYYY-MM-DD" which is unambiguously UTC midnight.
+  const start = new Date((schedule.vest_start_date as string).slice(0, 10))
   const now = new Date()
-  if (start > now) return 0
+  if (isNaN(start.getTime()) || start > now) return 0
 
   const vestAmount = Number(schedule.vest_amount)
   const totalTokens = Number(schedule.total_tokens)
