@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatDate, nextFriday, next16thOfMonth } from '@/lib/utils'
-import { calculateIncomeTax, grossToNet } from '@/lib/ato-tax'
+import { calculateIncomeTax } from '@/lib/ato-tax'
 import { IncomeConfigForm } from '@/components/income/IncomeConfigForm'
 import { IncomeExpenseChart } from '@/components/charts/IncomeExpenseChart'
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns'

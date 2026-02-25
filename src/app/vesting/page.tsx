@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { formatCurrency, formatDate, daysUntil } from '@/lib/utils'
+import { formatCurrency, formatDate, daysUntil, calcVestedTokens } from '@/lib/utils'
 import { getCryptoPrices } from '@/lib/coingecko'
 import { next16thOfMonth } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -19,11 +19,12 @@ export default async function VestingPage() {
   const withPrices = all.map(s => {
     const price = prices.find(p => p.symbol.toLowerCase() === s.coingecko_id?.toLowerCase())
     const tokenPrice = price?.price ?? Number(s.token_price ?? 0)
-    const remaining = Number(s.total_tokens) - Number(s.vested_tokens)
+    const vestedNow = calcVestedTokens(s)
+    const remaining = Math.max(Number(s.total_tokens) - vestedNow, 0)
     const vestValue = Number(s.vest_amount) * tokenPrice
     const remainingValue = remaining * tokenPrice
-    const pctVested = Number(s.total_tokens) > 0 ? (Number(s.vested_tokens) / Number(s.total_tokens)) * 100 : 0
-    return { ...s, tokenPrice, vestValue, remainingValue, remaining, pctVested, change24h: price?.change24h ?? 0 }
+    const pctVested = Number(s.total_tokens) > 0 ? (vestedNow / Number(s.total_tokens)) * 100 : 0
+    return { ...s, tokenPrice, vestValue, remainingValue, remaining, pctVested, vestedNow, change24h: price?.change24h ?? 0 }
   })
 
   const totalRemainingValue = withPrices.reduce((s, w) => s + w.remainingValue, 0)
@@ -62,7 +63,7 @@ export default async function VestingPage() {
                 {/* Vesting progress */}
                 <div className="mb-4">
                   <div className="flex justify-between text-xs text-zinc-500 mb-1.5">
-                    <span>{Number(schedule.vested_tokens).toLocaleString()} vested</span>
+                    <span>{schedule.vestedNow.toLocaleString()} vested</span>
                     <span>{Number(schedule.total_tokens).toLocaleString()} total</span>
                   </div>
                   <div className="w-full bg-zinc-800 rounded-full h-2">

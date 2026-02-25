@@ -191,7 +191,7 @@ export default async function DashboardPage() {
         <MetricCard
           title="Liquid Net Worth"
           value={liquidNetWorth}
-          change={nwChangePct30d * 0.95}
+          change={nwChangePct30d}
           changePeriod="30d"
           large
           className="xl:col-span-1"

@@ -90,7 +90,7 @@ export interface OneOffBill {
 
 export interface IncomeConfig {
   id: string
-  salary_gross: number
+  salary_gross_annual: number
   salary_frequency: 'fortnightly' | 'weekly' | 'monthly'
   next_salary_date: string
   tax_rate_override?: number

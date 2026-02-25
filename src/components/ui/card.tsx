@@ -4,7 +4,7 @@ import { HTMLAttributes } from 'react'
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('rounded-xl border border-zinc-800 bg-zinc-900/50 backdrop-blur', className)}
+      className={cn('rounded-xl border border-zinc-800 bg-zinc-900', className)}
       {...props}
     />
   )

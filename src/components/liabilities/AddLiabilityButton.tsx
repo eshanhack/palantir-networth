@@ -33,7 +33,7 @@ export function AddLiabilityButton() {
     <>
       <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" />Add Liability</Button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
           <div className="relative bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md mx-4 shadow-2xl">
             <div className="flex items-center justify-between p-5 border-b border-zinc-800">
