@@ -26,6 +26,7 @@ export function EditAssetModal({ asset, onClose }: EditAssetModalProps) {
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [fetchingPrice, setFetchingPrice] = useState(false)
 
   const [form, setForm] = useState({
     name: asset?.name ?? '',
@@ -38,6 +39,30 @@ export function EditAssetModal({ asset, onClose }: EditAssetModalProps) {
     is_liquid: asset?.is_liquid ?? true,
     notes: asset?.notes ?? '',
   })
+
+  const fetchPrice = async (symbol: string, cgId?: string) => {
+    const type = form.type
+    if (!symbol || (type !== 'crypto' && type !== 'stock' && type !== 'etf')) return
+    setFetchingPrice(true)
+    try {
+      const params = new URLSearchParams({ symbol, type })
+      if (cgId) params.set('coingecko_id', cgId)
+      const res = await fetch(`/api/price-lookup?${params}`)
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.price) {
+        setForm(f => ({
+          ...f,
+          value: data.price.toString(),
+          ...(data.coinId ? { coingecko_id: data.coinId } : {}),
+        }))
+      }
+    } catch {
+      // silent
+    } finally {
+      setFetchingPrice(false)
+    }
+  }
 
   if (!asset) return null
 
@@ -115,12 +140,16 @@ export function EditAssetModal({ asset, onClose }: EditAssetModalProps) {
               </select>
             </div>
             <div>
-              <label className="text-xs text-zinc-400 mb-1.5 block">{valueLabel}</label>
+              <label className="text-xs text-zinc-400 mb-1.5 flex items-center gap-1.5">
+                {valueLabel}
+                {fetchingPrice && <span className="text-indigo-400 text-xs">Fetching...</span>}
+              </label>
               <input
                 type="number" step="any" min="0"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500 disabled:opacity-50"
                 value={form.value}
                 onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
+                disabled={fetchingPrice}
                 required
               />
             </div>
@@ -132,6 +161,7 @@ export function EditAssetModal({ asset, onClose }: EditAssetModalProps) {
                     className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white font-mono placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500"
                     value={form.symbol}
                     onChange={e => setForm(f => ({ ...f, symbol: e.target.value }))}
+                    onBlur={e => fetchPrice(e.target.value, form.coingecko_id)}
                   />
                 </div>
                 <div>
@@ -151,6 +181,7 @@ export function EditAssetModal({ asset, onClose }: EditAssetModalProps) {
                       placeholder="e.g. bitcoin, ethereum"
                       value={form.coingecko_id}
                       onChange={e => setForm(f => ({ ...f, coingecko_id: e.target.value }))}
+                      onBlur={e => fetchPrice(form.symbol, e.target.value)}
                     />
                   </div>
                 )}
