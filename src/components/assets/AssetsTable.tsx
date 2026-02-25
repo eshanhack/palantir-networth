@@ -90,7 +90,7 @@ export function AssetsTable({ assets }: { assets: Asset[] }) {
         </table>
       </div>
 
-      <EditAssetModal asset={editing} onClose={() => setEditing(null)} />
+      <EditAssetModal key={editing?.id ?? 'none'} asset={editing} onClose={() => setEditing(null)} />
     </>
   )
 }
