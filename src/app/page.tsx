@@ -28,6 +28,7 @@ async function getDashboardData() {
     oneOffBillsRes,
     incomeConfigRes,
     vestingRes,
+    dividendRes,
   ] = await Promise.all([
     supabase.from('assets').select('*').order('value', { ascending: false }),
     supabase.from('liabilities').select('*'),
@@ -37,6 +38,7 @@ async function getDashboardData() {
     supabase.from('one_off_bills').select('*').eq('is_paid', false).order('due_date'),
     supabase.from('income_config').select('*').limit(1).single(),
     supabase.from('token_vesting_schedules').select('*'),
+    supabase.from('dividend_config').select('*').limit(1).single(),
   ])
 
   return {
@@ -48,6 +50,7 @@ async function getDashboardData() {
     oneOffBills: oneOffBillsRes.data ?? [],
     incomeConfig: incomeConfigRes.data,
     vestingSchedules: vestingRes.data ?? [],
+    dividendConfig: dividendRes.data,
   }
 }
 
@@ -73,7 +76,7 @@ async function getMonthlyHistory() {
 
 export default async function DashboardPage() {
   const [data, monthlyHistory] = await Promise.all([getDashboardData(), getMonthlyHistory()])
-  const { assets, liabilities, transactions, snapshots, recurringBills, oneOffBills, incomeConfig, vestingSchedules } = data
+  const { assets, liabilities, transactions, snapshots, recurringBills, oneOffBills, incomeConfig, vestingSchedules, dividendConfig } = data
 
   // Build a lookup: asset_id → vesting schedule
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -131,30 +134,50 @@ export default async function DashboardPage() {
     }))
     .sort((a, b) => b.amount - a.amount)
 
-  // Income events
+  // Income events — build datetimes with proper times for live countdown
   const incomeEvents = []
+
   if (incomeConfig) {
-    const { totalTax, netAnnual } = calculateIncomeTax(Number(incomeConfig.salary_gross_annual))
+    const { netAnnual } = calculateIncomeTax(Number(incomeConfig.salary_gross_annual))
     const fortnightlyNet = netAnnual / 26
+    // Advance next_salary_date by 14 days if it's today or in the past
+    const salaryDate = new Date(incomeConfig.next_salary_date)
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    while (salaryDate <= today) salaryDate.setDate(salaryDate.getDate() + 14)
+    salaryDate.setHours(9, 0, 0, 0)
     incomeEvents.push({
       label: 'Salary',
-      date: incomeConfig.next_salary_date,
+      datetime: salaryDate.toISOString(),
       amount: fortnightlyNet,
       icon: 'salary' as const,
       description: 'Fortnightly after tax',
     })
   }
+
+  // Dividend — next Friday 18:00
+  const nextDivDate = nextFriday()
+  nextDivDate.setHours(18, 0, 0, 0)
   incomeEvents.push({
     label: 'Dividend',
-    date: format(nextFriday(), 'yyyy-MM-dd'),
-    amount: 0,
+    datetime: nextDivDate.toISOString(),
+    amount: dividendConfig?.weekly_amount ?? 0,
     icon: 'dividend' as const,
     description: 'Weekly Friday income',
   })
+
+  // Token vest — next 16th of month at midnight
+  // Calculate vest value: sum of vest_amount * asset price per schedule
+  const assetPriceById = new Map(assets.map(a => [a.id, Number(a.value)]))
+  const nextVestAmount = vestingSchedules.reduce((sum, vs) => {
+    const price = assetPriceById.get(vs.asset_id) ?? 0
+    return sum + Number(vs.vest_amount) * price
+  }, 0)
+  const nextVestDate = next16thOfMonth()
+  nextVestDate.setHours(0, 0, 0, 0)
   incomeEvents.push({
     label: 'Token Vest',
-    date: format(next16thOfMonth(), 'yyyy-MM-dd'),
-    amount: 0,
+    datetime: nextVestDate.toISOString(),
+    amount: nextVestAmount,
     icon: 'vest' as const,
     description: '16th of month',
   })
