@@ -13,6 +13,7 @@ import {
   Settings,
   RefreshCw,
   Coins,
+  DollarSign,
 } from 'lucide-react'
 
 const nav = [
@@ -21,6 +22,7 @@ const nav = [
   { href: '/liabilities', label: 'Liabilities', icon: CreditCard },
   { href: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { href: '/income', label: 'Income', icon: TrendingUp },
+  { href: '/dividends', label: 'Dividends', icon: DollarSign },
   { href: '/spending', label: 'Spending', icon: Receipt },
   { href: '/vesting', label: 'Vesting', icon: Coins },
   { href: '/bills', label: 'Bills', icon: RefreshCw },
